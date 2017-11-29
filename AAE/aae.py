@@ -21,7 +21,7 @@ learning_rate = 0.001
 beta1 = 0.9
 results_path = './Results'
 n_labels = 10
-n_labeled = 1000
+n_labeled = 2000
 
 # placement of data
 x_input = tf.placeholder(dtype=tf.float32, shape=[batch_size, input_dim], name='Input')
@@ -129,7 +129,7 @@ def next_batch(x, y, batch_size):
     return x[random_index], y[random_index]
 
 
-def train(train_model=True):
+def train(train_model=False):
     # Reconstaction phase
     with tf.variable_scope(tf.get_variable_scope()):
         encoder_output_label, encoder_output_latent = encoder(x_input)
@@ -293,7 +293,8 @@ if __name__ == '__main__':
     parser.add_argument('--train', '-t', type=bool, default=True,
                         help='Set to True to train a new model, False to load weights and display image grid')
     args = parser.parse_args()
-    train(train_model=args.train)
+    train(train_model=False)
+    # train(train_model=args.train)
 
 
 
