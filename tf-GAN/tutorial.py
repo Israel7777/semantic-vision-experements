@@ -1,58 +1,4 @@
 
-# coding: utf-8
-
-# # TFGAN Tutorial
-# 
-# ## Authors: Joel Shor, joel-shor
-# 
-# ### More complex examples, see [`tensorflow/models/gan`](https://github.com/tensorflow/models/tree/master/research/gan)
-# 
-# 
-# This notebook will walk you through the basics of using [TFGAN](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/contrib/gan) to define, train, and evaluate Generative Adversarial Networks. We describe the library's core features as well as some extra features. This colab assumes a familiarity with TensorFlow's Python API. For more on TensorFlow, please see [TensorFlow tutorials](https://www.tensorflow.org/tutorials/).
-# 
-# Please note that running on GPU will significantly speed up the training steps, but is not required.
-# 
-# Last update: 2018-02-10.
-
-# ## Table of Contents
-# <a href='#installation_and_setup'>Installation and Setup</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#download_data'>Download Data</a><br>
-# <a href='#unconditional_example'>Unconditional GAN example</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#unconditional_input'>Input pipeline</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#unconditional_model'>Model</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#unconditional_loss'>Loss</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#unconditional_train'>Train and evaluation</a><br>
-# <a href='#ganestimator_example'>GANEstimator example</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#ganestimator_input'>Input pipeline</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#ganestimator_train'>Train</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#ganestimator_eval'>Eval</a><br>
-# <a href='#conditional_example'>Conditional GAN example</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#conditional_input'>Input pipeline</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#conditional_model'>Model</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#conditional_loss'>Loss</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#conditional_train'>Train and evaluation</a><br>
-# <a href='#infogan_example'>InfoGAN example</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#infogan_input'>Input pipeline</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#infogan_model'>Model</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#infogan_loss'>Loss</a><br>
-# &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#infogan_train'>Train and evaluation</a><br>
-
-# <a id='installation_and_setup'></a>
-# ## Installation and setup
-# 
-# To make sure that your version of TensorFlow has TFGAN included, run
-# 
-# ```
-# python -c "import tensorflow.contrib.gan as tfgan"
-# ```
-# 
-# You also need to install the TFGAN models library.
-# 
-# To check that these two steps work, execute the [`Imports`](#imports) cell. If it complains about unknown modules, restart the notebook after moving to the TFGAN models directory.
-
-# In[2]:
-
-
 # Make TFGAN models and TF-Slim models discoverable.
 import sys
 import os
@@ -65,13 +11,6 @@ sys.path.append(os.path.join('..', 'slim'))
 # ### Imports
 
 # In[3]:
-
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-get_ipython().run_line_magic('matplotlib', 'inline')
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -171,24 +110,6 @@ if not tf.gfile.Exists(MNIST_DATA_DIR):
 download_and_convert_mnist.run(MNIST_DATA_DIR)
 
 
-# <a id='unconditional_example'></a>
-# # Unconditional GAN Example
-# 
-# With unconditional GANs, we want a generator network to produce realistic-looking digits. During training, the generator tries to produce realistic-enough digits to 'fool' a discriminator network, while the discriminator tries to distinguish real digits from generated ones. See the paper ['NIPS 2016 Tutorial: Generative Adversarial Networks'](https://arxiv.org/pdf/1701.00160.pdf) by Goodfellow or ['Generative Adversarial Networks'](https://arxiv.org/abs/1406.2661) by Goodfellow et al. for more details.
-# 
-# The steps to using TFGAN to set up an unconditional GAN, in the simplest case, are as follows:
-# 
-# 1. **Model**: Set up the generator and discriminator graphs with a [`GANModel`](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L39) tuple. Use [`tfgan.gan_model`](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L64) or create one manually.
-# 1. **Losses**: Set up the generator and discriminator losses with a [`GANLoss`](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L115) tuple. Use [`tfgan.gan_loss`](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L328) or create one manually.
-# 1. **Train ops**: Set up TensorFlow ops that compute the loss, calculate the gradients, and update the weights with a [`GANTrainOps`](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L128) tuple. Use [`tfgan.gan_train_ops`](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L476) or create one manually.
-# 1. **Run alternating train loop**: Run the training Ops. This can be done with [`tfgan.gan_train`](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L661), or done manually.
-# 
-# Each step can be performed by a TFGAN library call, or can be constructed manually for more control.
-
-# <a id='unconditional_input'></a>
-# ## Data input pipeline
-
-# In[5]:
 
 
 tf.reset_default_graph()
@@ -205,26 +126,6 @@ check_real_digits = tfgan.eval.image_reshaper(
     real_images[:20,...], num_cols=10)
 visualize_digits(check_real_digits)
 
-
-# <a id='unconditional_model'></a>
-# ## Model
-# 
-# Set up a [GANModel tuple](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L39), which defines everything we need to perform GAN training. You can create the tuple with the library functions, or you can manually create one.
-# 
-# Define the GANModel tuple using the TFGAN library function.
-# For the simplest case, we need the following:
-# 
-# 1. A generator function that takes input noise and outputs generated MNIST digits
-# 
-# 1. A discriminator function that takes images and outputs a probability of  being real or fake
-# 
-# 1. Real images
-# 
-# 1. A noise vector to pass to the generator
-
-# ### Generator
-
-# In[6]:
 
 
 def generator_fn(noise, weight_decay=2.5e-5, is_training=True):
@@ -312,14 +213,7 @@ check_generated_digits = tfgan.eval.image_reshaper(
 visualize_digits(check_generated_digits)
 
 
-# <a id='unconditional_loss'></a>
-# ## Losses
-# 
-# We next set up the GAN model losses.
-# 
-# Loss functions are currently an active area of research. The [losses library](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/losses/python/losses_impl.py) provides some well-known or successful loss functions, such as the [original minimax](https://arxiv.org/abs/1406.2661), [Wasserstein](https://arxiv.org/abs/1701.07875) (by Arjovsky et al), and [improved Wasserstein](https://arxiv.org/abs/1704.00028) (by Gulrajani et al) losses. It is easy to add loss functions to the library as they are developed, and you can also pass in a custom loss function.
 
-# In[9]:
 
 
 # We can use the minimax loss from the original paper.
@@ -357,13 +251,7 @@ for gan_loss, name in [(vanilla_gan_loss, 'vanilla loss'),
     evaluate_tfgan_loss(gan_loss, name)
 
 
-# <a id='unconditional_train'></a>
-# ## Training and Evaluation
-# 
-# ### Train Ops
-# In order to train a GAN, we need to train both generator and discriminator networks using some variant of the alternating training paradigm. To do this, we construct a [GANTrainOps tuple](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L128) either manually or with a library call. We pass it the optimizers that we want to use, as well as any extra arguments that we'd like passed to slim's `create_train_op` function.
 
-# In[10]:
 
 
 generator_optimizer = tf.train.AdamOptimizer(0.001, beta1=0.5)
@@ -374,12 +262,6 @@ gan_train_ops = tfgan.gan_train_ops(
     generator_optimizer,
     discriminator_optimizer)
 
-
-# ### Evaluation
-# 
-# TFGAN provides some standard methods of evaluating generative models. In this example, we use a pre-trained classifier to calculate what is called the 'Inception Score' from [Improved Techniques for Training GANs](https://arxiv.org/abs/1606.03498) (by Salimans et al), which is a combined score of quality and diversity. We also calculate the 'Frechet Inception distance' from [GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium](https://arxiv.org/abs/1706.08500) (by Heusel et al), which measures how close the generated image distribution is to the real image distribution. 
-
-# In[11]:
 
 
 num_images_to_eval = 500
@@ -406,19 +288,6 @@ generated_data_to_visualize = tfgan.eval.image_reshaper(
     eval_images[:20,...], num_cols=10)
 
 
-# ### Train Steps
-# 
-# Now we're ready to train. TFGAN handles the alternating training scheme that arises from the GAN minmax game. It also gives you the option of changing the ratio of discriminator updates to generator updates. Most applications (distributed setting, borg, etc) will use the [`gan_train`](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L661) function, but we will use a different TFGAN utility and manually run the train ops so we can introspect more.
-# 
-# This code block should take about **1 minute** to run on a GPU kernel, and about **8 minutes** on CPU.
-
-# In[12]:
-
-
-# We have the option to train the discriminator more than one step for every 
-# step of the generator. In order to do this, we use a `GANTrainSteps` with 
-# desired values. For this example, we use the default 1 generator train step 
-# for every discriminator train step.
 train_step_fn = tfgan.get_sequential_train_steps()
 
 global_step = tf.train.get_or_create_global_step()
@@ -455,15 +324,6 @@ plt.title('Training loss per step')
 plt.plot(*zip(*loss_values))
 
 
-# <a id='ganestimator_example'></a>
-# # GANEstimator
-# TensorFlow offers a tf.Estimators API that makes it easy to train models. TFGAN offers a tf.Estimators compatible `GANEstimator`.
-
-# <a id='ganestimator_input'></a>
-# ## Data input pipeline
-# `tf.Estimators` use `input_fn` to pass data to the estimators. We need one data source for training and one for inference.
-
-# In[14]:
 
 
 tf.reset_default_graph()
@@ -543,17 +403,6 @@ plt.axis('off')
 plt.imshow(np.squeeze(tiled_images), cmap='gray')
 
 
-# <a id='conditional_example'></a>
-# # Conditional GAN Example
-# 
-# In the conditional GAN setting on MNIST, we wish to train a generator to produce
-# realistic-looking digits **of a particular type**. For example, we want to be able to produce as many '3's as we want without producing other digits. In contrast, in the unconditional case, we have no control over what digit the generator produces. In order to train a conditional generator, we pass the digit's identity to the generator and discriminator in addition to the noise vector. See [Conditional Generative Adversarial Nets](https://arxiv.org/abs/1411.1784) by Mirza and Osindero for more details.
-
-# <a id='conditional_input'></a>
-# 
-# ## Data input pipeline
-
-# In[17]:
 
 
 tf.reset_default_graph()
@@ -570,14 +419,7 @@ check_real_digits = tfgan.eval.image_reshaper(real_images[:20,...], num_cols=10)
 visualize_digits(check_real_digits)
 
 
-# <a id='conditional_model'></a>
-# ## Model
-# 
-# We perform the same procedure as in the unconditional case, but pass the digit label to the generator and discriminator as well as a random noise vector.
 
-# ### Generator
-
-# In[18]:
 
 
 def conditional_generator_fn(inputs, weight_decay=2.5e-5, is_training=True):
@@ -677,15 +519,6 @@ gan_loss = tfgan.gan_loss(
 evaluate_tfgan_loss(gan_loss)
 
 
-# <a id='conditional_train'></a>
-# ## Training and Evaluation
-# 
-# 
-# We use a slightly different learning rate schedule that involves decay.
-
-# ### Train Ops
-
-# In[22]:
 
 
 generator_optimizer = tf.train.AdamOptimizer(0.0009, beta1=0.5)
@@ -696,12 +529,6 @@ gan_train_ops = tfgan.gan_train_ops(
     generator_optimizer,
     discriminator_optimizer)
 
-
-# ### Evaluation
-# 
-# Since quantitative metrics for generators are sometimes tricky (see [A note on the evaluation of generative models](https://arxiv.org/abs/1511.01844) for some surprising ones), we also want to visualize our progress.
-
-# In[23]:
 
 
 # Set up class-conditional visualization. We feed class labels to the generator
@@ -726,14 +553,7 @@ xent_score = util.mnist_cross_entropy(
     eval_images, one_hot_labels, MNIST_CLASSIFIER_FROZEN_GRAPH)
 
 
-# ### Train Steps
-# 
-# In this example, we train the generator and discriminator while keeping track of
-# our important metric, the cross entropy loss with the real labels.
-# 
-# This code block should take about **2 minutes** on GPU and **10 minutes** on CPU.
 
-# In[24]:
 
 
 global_step = tf.train.get_or_create_global_step()
@@ -766,17 +586,6 @@ plt.plot(*zip(*loss_values))
 plt.show()
 
 
-# <a id='infogan_example'></a>
-# # InfoGAN Example
-# 
-# InfoGAN is a technique to induce semantic meaning in the latent space of a GAN generator in an unsupervised way. In this example, the generator learns how to generate a specific digit **without ever seeing labels**. This is achieved by maximizing the mutual information between some subset of the noise vector and the generated images, while also trying to generate realistic images. See [InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets](https://arxiv.org/abs/1606.03657) by Chen at al for more details.
-
-# <a id='infogan_input'></a>
-# ## Data input pipeline
-# 
-# This is the same as the unconditional case (we don't need labels).
-
-# In[11]:
 
 
 tf.reset_default_graph()
